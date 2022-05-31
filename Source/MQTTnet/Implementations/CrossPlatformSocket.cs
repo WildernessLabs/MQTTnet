@@ -148,7 +148,7 @@ namespace MQTTnet.Implementations
 #if NET452 || NET461
                     await Task.Factory.FromAsync(_socket.BeginConnect, _socket.EndConnect, host, port, null).ConfigureAwait(false);
 #else
-                    await _socket.ConnectAsync(host, port).ConfigureAwait(false);
+                    _socket.Connect(host, port);
 #endif
                 }
 #endif
