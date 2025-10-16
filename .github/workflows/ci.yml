@@ -11,10 +11,6 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      - name: Setup Windows SDK
-        uses: GuillaumeFalourd/setup-windows10-sdk-action@v1
-        with:
-          sdk-version: 18362
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -30,53 +26,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Signing Certificate
-        run: |
-          $secret = '${{ secrets.SNC_BASE64 }}'
-          $decoded = [System.Convert]::FromBase64CharArray($secret, 0, $secret.Length)
-          Set-Content -Path ${{ github.workspace }}\certificate.snk -Value $decoded -AsByteStream
-
       - name: Restore nuget packages
         run: msbuild MQTTnet.sln /t:Restore /p:Configuration="Release" /verbosity:m
 
       - name: Build solution
         run: msbuild MQTTnet.sln /t:Build /p:Configuration="Release" /verbosity:m /p:FileVersion=${{ env.VERSION }} /p:AssemblyVersion=${{ env.VERSION }} /p:PackageVersion=${{ env.VERSION }} /p:SignAssembly=true /p:AssemblyOriginatorKeyFile=${{ github.workspace }}\certificate.snk
-
-      - name: Setup VSTest
-        uses: darenm/Setup-VSTest@v1
-
-      - name: Core Tests
-        run: vstest.console.exe Source\MQTTnet.Tests\bin\Release\net7.0\MQTTnet.Tests.dll
-
-      - name: ASP.NET Tests
-        run: vstest.console.exe Source\MQTTnet.AspNetCore.Tests\bin\Release\netcoreapp3.1\MQTTnet.AspNetCore.Tests.dll
-
-      - name: Install sign CLI tool
-        run: dotnet tool install --tool-path . sign --version 0.9.0-beta.23127.3
-
-      - name: Sign nugets
-        shell: pwsh
-        run: >
-          ./sign code azure-key-vault `
-          "**/*.nupkg" `
-          --base-directory "${{ github.workspace }}/Source" `
-          --publisher-name "MQTTnet" `
-          --description "MQTTnet" `
-          --description-url "https://github.com/dotnet/MQTTnet" `
-          --azure-key-vault-tenant-id "${{ secrets.AZURE_TENANT_ID }}" `
-          --azure-key-vault-client-id "${{ secrets.AZURE_CLIENT_ID }}" `
-          --azure-key-vault-client-secret "${{ secrets.AZURE_CLIENT_SECRET }}" `
-          --azure-key-vault-certificate "${{ secrets.KEY_VAULT_CERTIFICATE_ID }}" `
-          --azure-key-vault-url "${{ secrets.KEY_VAULT_URL }}"
-
-      - name: Upload signed nuget packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: signed-nugets
-          path: |
-            ${{ github.workspace }}/Source/**/*.nupkg
-            ${{ github.workspace }}/Source/**/*.snupkg
-
-      - name: Publish MyGet nugets
-        if: ${{ github.event_name == 'push' }}
-        run: dotnet nuget push ${{ github.workspace }}/Source/**/*.nupkg -k ${{ secrets.MYGET_API_KEY }} -s https://www.myget.org/F/mqttnet/api/v3/index.json --skip-duplicate
