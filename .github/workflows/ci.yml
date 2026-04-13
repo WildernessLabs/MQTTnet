@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             3.1.x
@@ -22,7 +22,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Restore nuget packages
         run: msbuild MQTTnet.sln /t:Restore /p:Configuration="Release" /verbosity:m
